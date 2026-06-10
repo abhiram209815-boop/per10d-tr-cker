@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cycle Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0a14;
+    --surface: #1a1122;
+    --card: #221630;
+    --card2: #1e1229;
+    --accent: #b87bc8;
+    --accent-soft: #dba8ef;
+    --accent-glow: rgba(184,123,200,0.15);
+    --rose: #e08899;
+    --blue: #7aabd4;
+    --green: #7ac4a8;
+    --gold: #d4a96a;
+    --text: #f0e8f8;
+    --muted: #7a6890;
+    --border: #2e1e40;
+    --border2: #3d2855;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 0%, #2a1040 0%, var(--bg) 70%);
+  }
+  .login-box { width: 100%; max-width: 360px; text-align: center; }
+  .login-moon { font-size: 3rem; display: block; margin-bottom: 16px; filter: drop-shadow(0 0 20px rgba(184,123,200,0.5)); }
+  .login-title { font-family: 'Playfair Display', serif; font-size: 1.9rem; color: var(--accent-soft); margin-bottom: 6px; }
+  .login-sub { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 36px; }
+  .login-field { margin-bottom: 14px; text-align: left; }
+  .login-field label { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px; }
+  .login-field input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: 10px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 1rem; padding: 12px 16px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.05em;
+  }
+  .login-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .pin-display { display: flex; gap: 12px; justify-content: center; margin: 10px 0 18px; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2); background: transparent; transition: background 0.15s, border-color 0.15s; }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .pin-btn {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 1.2rem; font-weight: 400;
+    padding: 16px; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .pin-btn:hover { background: var(--card2); border-color: var(--border2); }
+  .pin-btn:active { background: var(--border2); }
+  .pin-btn.del { font-size: 1rem; color: var(--muted); }
+  .pin-btn.empty { background: transparent; border-color: transparent; cursor: default; }
+  .login-btn {
+    width: 100%; background: var(--accent); border: none; border-radius: 10px; color: #0f0a14;
+    font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.95rem; padding: 13px;
+    cursor: pointer; transition: background 0.2s; letter-spacing: 0.03em;
+  }
+  .login-btn:hover { background: var(--accent-soft); }
+  .login-error { font-size: 0.8rem; color: var(--rose); margin-top: 10px; min-height: 20px; text-align: center; }
+
+  /* APP */
+  #app-screen { display: none; }
+  .app-header { padding: 28px 20px 0; text-align: center; position: relative; background: radial-gradient(ellipse at 50% -20%, #2a1040 0%, transparent 70%); }
+  .app-moon { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .app-title { font-family: 'Playfair Display', serif; font-size: 1.7rem; color: var(--accent-soft); margin-bottom: 2px; }
+  .app-title em { font-style: italic; color: var(--text); }
+  .app-sub { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px; }
+  .logout-btn {
+    position: absolute; top: 28px; right: 20px; background: none; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.72rem;
+    padding: 6px 10px; cursor: pointer; letter-spacing: 0.05em; transition: border-color 0.2s, color 0.2s;
+  }
+  .logout-btn:hover { border-color: var(--rose); color: var(--rose); }
+  .phase-banner { margin: 0 16px 20px; border-radius: 14px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); }
+  .phase-icon { font-size: 1.8rem; flex-shrink: 0; }
+  .phase-name { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 2px; }
+  .phase-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+  .phase-day { margin-left: auto; font-size: 0.72rem; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .phase-day strong { display: block; font-size: 1.3rem; font-weight: 400; color: var(--text); font-family: 'Playfair Display', serif; }
+  .summary { display: flex; gap: 10px; padding: 0 16px 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; flex: 1; text-align: center; }
+  .stat-value { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--accent-soft); display: block; }
+  .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 2px; }
+  .section-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; padding: 0 20px 10px; }
+  .timeline { position: relative; padding: 0 16px 12px; }
+  .timeline::before { content: ''; position: absolute; left: 30px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+  .entry { position: relative; padding: 0 0 14px 46px; }
+  .dot { position: absolute; left: 22px; top: 14px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .dot-inner { width: 6px; height: 6px; border-radius: 50%; }
+  .dot.logged .dot-inner { background: var(--accent); }
+  .dot.missed .dot-inner { background: var(--rose); }
+  .dot.predicted .dot-inner { background: var(--blue); opacity: 0.7; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px; cursor: pointer; transition: border-color 0.18s; }
+  .card:hover { border-color: var(--border2); }
+  .card.predicted { border-style: dashed; opacity: 0.72; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; }
+  .month-label { font-family: 'Playfair Display', serif; font-size: 1rem; }
+  .badge { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+  .badge.on-time { background: #1e1030; color: var(--accent); border: 1px solid var(--accent); }
+  .badge.missed { background: #2a1020; color: var(--rose); border: 1px solid var(--rose); }
+  .badge.predicted-badge { background: #101828; color: var(--blue); border: 1px solid var(--blue); }
+  .card-date { font-size: 0.78rem; color: var(--muted); margin-top: 5px; }
+  .card-detail { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); display: none; line-height: 1.8; }
+  .card-detail.open { display: block; }
+  .detail-row { display: flex; justify-content: space-between; }
+  .detail-row span:last-child { color: var(--text); }
+  .add-section { padding: 4px 16px 12px; }
+  .add-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.82rem; padding: 13px; border-radius: 13px; cursor: pointer; transition: border-color 0.18s, color 0.18s; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent-soft); }
+  .add-form { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 16px; display: none; margin-top: 8px; }
+  .add-form.open { display: block; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 110px; }
+  .form-group label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .form-group input, .form-group select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 9px 12px; outline: none; transition: border-color 0.18s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-actions { display: flex; gap: 8px; align-items: center; }
+  .submit-btn { background: var(--accent); color: #0f0a14; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.82rem; padding: 9px 18px; cursor: pointer; transition: background 0.18s; }
+  .submit-btn:hover { background: var(--accent-soft); }
+  .cancel-btn { background: none; border: none; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.82rem; padding: 9px 12px; cursor: pointer; }
+  .note-text { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 12px 20px 32px; font-style: italic; line-height: 1.6; }
+
+  /* ADMIN */
+  #admin-screen { display: none; padding: 28px 16px 60px; max-width: 480px; margin: 0 auto; }
+  .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .admin-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--accent-soft); }
+  .admin-section { margin-bottom: 28px; }
+  .admin-section-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .user-list { display: flex; flex-direction: column; gap: 8px; }
+  .user-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .user-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; }
+  .user-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .delete-user-btn { background: none; border: 1px solid var(--border); border-radius: 7px; color: var(--rose); font-family: 'Inter', sans-serif; font-size: 0.72rem; padding: 5px 10px; cursor: pointer; transition: border-color 0.18s; }
+  .delete-user-btn:hover { border-color: var(--rose); }
+  .new-user-form { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .status-msg { font-size: 0.78rem; color: var(--green); margin-top: 8px; min-height: 18px; }
+  .status-msg.error { color: var(--rose); }
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <span class="login-moon">🌙</span>
+    <h1 class="login-title">Cycle Tracker</h1>
+    <p class="login-sub">Family · Private · 2026</p>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="your name" autocomplete="off" autocapitalize="none">
+    </div>
+    <div class="login-field">
+      <label>PIN</label>
+      <div class="pin-display">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad" id="pin-pad">
+        <button class="pin-btn" data-pin="1">1</button>
+        <button class="pin-btn" data-pin="2">2</button>
+        <button class="pin-btn" data-pin="3">3</button>
+        <button class="pin-btn" data-pin="4">4</button>
+        <button class="pin-btn" data-pin="5">5</button>
+        <button class="pin-btn" data-pin="6">6</button>
+        <button class="pin-btn" data-pin="7">7</button>
+        <button class="pin-btn" data-pin="8">8</button>
+        <button class="pin-btn" data-pin="9">9</button>
+        <button class="pin-btn empty" disabled></button>
+        <button class="pin-btn" data-pin="0">0</button>
+        <button class="pin-btn del" id="pin-del">⌫</button>
+      </div>
+    </div>
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="app-header">
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+    <span class="app-moon">🌙</span>
+    <h1 class="app-title"><em id="user-name-title">—</em>'s Cycle Tracker</h1>
+    <p class="app-sub">2026 · Private</p>
+  </div>
+  <div class="phase-banner" id="phase-banner">
+    <span class="phase-icon" id="phase-icon">🌑</span>
+    <div>
+      <div class="phase-name" id="phase-name">—</div>
+      <div class="phase-desc" id="phase-desc">—</div>
+    </div>
+    <div class="phase-day"><strong id="phase-cycle-day">—</strong>cycle day</div>
+  </div>
+  <div class="summary">
+    <div class="stat"><span class="stat-value" id="avg-cycle">—</span><span class="stat-label">Avg Cycle</span></div>
+    <div class="stat"><span class="stat-value" id="next-date">—</span><span class="stat-label">Next Period</span></div>
+    <div class="stat"><span class="stat-value" id="days-away">—</span><span class="stat-label">Days Away</span></div>
+  </div>
+  <div class="section-label">History &amp; Predictions</div>
+  <div class="timeline" id="timeline"><div class="loading">Loading…</div></div>
+  <div class="add-section">
+    <button class="add-btn" id="toggle-add">+ Log a new entry</button>
+    <div class="add-form" id="add-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Month</label>
+          <select id="new-month"></select>
+        </div>
+        <div class="form-group">
+          <label>Day</label>
+          <input type="number" id="new-day" min="1" max="31" placeholder="e.g. 24">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <input type="text" id="new-notes" placeholder="light flow, cramps…">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="submit-btn" id="save-entry-btn">Save</button>
+        <button class="cancel-btn" id="cancel-entry-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <p class="note-text">Tap any entry to expand. Dashed cards are predictions based on your average cycle.</p>
+</div>
+
+<!-- ADMIN -->
+<div id="admin-screen">
+  <div class="admin-header">
+    <h1 class="admin-title">🛠 Admin Panel</h1>
+    <button class="logout-btn" id="admin-logout-btn">Sign out</button>
+  </div>
+  <div class="admin-section">
+    <div class="admin-section-label">Current Users</div>
+    <div class="user-list" id="user-list"><div class="loading">Loading…</div></div>
+  </div>
+  <div class="admin-section">
+    <div class="admin-section-label">Add New User</div>
+    <div class="new-user-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Display Name</label>
+          <input type="text" id="new-user-name" placeholder="e.g. Priya">
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="new-user-username" placeholder="e.g. priya" autocapitalize="none">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>4-Digit PIN</label>
+          <input type="number" id="new-user-pin" placeholder="e.g. 2345" min="1000" max="9999">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="submit-btn" id="add-user-btn">Add User</button>
+      </div>
+      <div class="status-msg" id="admin-status"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDmc9ExwNATWp5tbZ7URqnBAvOMVlo1whM",
+  authDomain: "period-tracker-620c9.firebaseapp.com",
+  projectId: "period-tracker-620c9",
+  storageBucket: "period-tracker-620c9.firebasestorage.app",
+  messagingSenderId: "97451330110",
+  appId: "1:97451330110:web:397941bde1b9b553c09f6f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const ADMIN = { username: 'abhi', pin: '1509', displayName: 'Abhi' };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let currentUser = null;
+let pinBuffer = '';
+let userEntries = [];
+
+// ── PIN PAD ──
+function updatePinDots() {
+  for (let i = 0; i < 4; i++)
+    document.getElementById('pd' + i).classList.toggle('filled', i < pinBuffer.length);
+}
+
+document.getElementById('pin-pad').addEventListener('click', e => {
+  const btn = e.target.closest('.pin-btn');
+  if (!btn || btn.classList.contains('empty') || btn.classList.contains('del')) return;
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += btn.dataset.pin;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(doLogin, 150);
+});
+
+document.getElementById('pin-del').addEventListener('click', () => {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('login-error').textContent = '';
+});
+
+// ── LOGIN ──
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('login-username').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim().toLowerCase();
+  const pin = pinBuffer;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+
+  if (!username || pin.length < 4) {
+    errEl.textContent = 'Enter your username and 4-digit PIN.';
+    return;
+  }
+
+  if (username === ADMIN.username && pin === ADMIN.pin) {
+    currentUser = { username: ADMIN.username, displayName: ADMIN.displayName, isAdmin: true };
+    showAdmin();
+    return;
+  }
+
+  try {
+    const snap = await getDoc(doc(db, 'users', username));
+    if (!snap.exists()) {
+      errEl.textContent = 'Username not found.';
+      pinBuffer = ''; updatePinDots(); return;
+    }
+    const data = snap.data();
+    if (data.pin !== pin) {
+      errEl.textContent = 'Incorrect PIN. Try again.';
+      pinBuffer = ''; updatePinDots(); return;
+    }
+    currentUser = { username, displayName: data.displayName, isAdmin: false };
+    showApp();
+  } catch(e) {
+    errEl.textContent = 'Connection error. Try again.';
+    pinBuffer = ''; updatePinDots();
+  }
+}
+
+// ── LOGOUT ──
+function doLogout() {
+  currentUser = null; pinBuffer = ''; updatePinDots();
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'none';
+}
+document.getElementById('logout-btn').addEventListener('click', doLogout);
+document.getElementById('admin-logout-btn').addEventListener('click', doLogout);
+
+// ── SHOW APP ──
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('admin-screen').style.display = 'none';
+  document.getElementById('user-name-title').textContent = currentUser.displayName;
+  populateMonthDropdown();
+  await loadEntries();
+}
+
+// ── SHOW ADMIN ──
+async function showAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  await loadUserList();
+}
+
+// ── MONTH DROPDOWN ──
+function populateMonthDropdown() {
+  const sel = document.getElementById('new-month');
+  sel.innerHTML = '';
+  const today = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const opt = document.createElement('option');
+    opt.value = d.getMonth() + 1;
+    opt.dataset.year = d.getFullYear();
+    opt.textContent = MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    sel.appendChild(opt);
+  }
+}
+
+// ── LOAD ENTRIES ──
+async function loadEntries() {
+  document.getElementById('timeline').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const q = query(collection(db, 'users', currentUser.username, 'entries'), orderBy('sortKey'));
+    const snap = await getDocs(q);
+    userEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderApp();
+  } catch(e) {
+    document.getElementById('timeline').innerHTML = '<div class="loading">Failed to load. Check connection.</div>';
+  }
+}
+
+// ── CYCLE HELPERS ──
+function cycleGaps(entries) {
+  const logged = entries.filter(e => e.type === 'logged' && e.day);
+  const gaps = [];
+  for (let i = 1; i < logged.length; i++) {
+    const a = new Date(logged[i-1].year, logged[i-1].month - 1, logged[i-1].day);
+    const b = new Date(logged[i].year, logged[i].month - 1, logged[i].day);
+    const diff = Math.round((b - a) / 864e5);
+    if (diff > 18 && diff < 60) gaps.push(diff);
+  }
+  return gaps;
+}
+
+function avgCycle(entries) {
+  const g = cycleGaps(entries);
+  return g.length ? Math.round(g.reduce((a,b) => a+b, 0) / g.length) : 28;
+}
+
+function lastLogged(entries) {
+  const logged = entries.filter(e => e.type === 'logged' && e.day);
+  return logged.length ? logged[logged.length - 1] : null;
+}
+
+function nextPredicted(entries) {
+  const last = lastLogged(entries);
+  if (!last) return null;
+  const d = new Date(last.year, last.month - 1, last.day);
+  return new Date(d.getTime() + avgCycle(entries) * 864e5);
+}
+
+function getPhase(entries) {
+  const last = lastLogged(entries);
+  if (!last) return null;
+  const lastDate = new Date(last.year, last.month - 1, last.day);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const avg = avgCycle(entries);
+  const cycleDay = Math.round((today - lastDate) / 864e5) + 1;
+  const normDay = ((cycleDay - 1) % avg) + 1;
+  const scale = avg / 28;
+  if (normDay <= Math.round(5 * scale))  return { phase: 'Menstrual Phase',  icon: '🩸', color: 'var(--rose)',   desc: 'Rest and be gentle with yourself. Energy is lower and inward focus is natural.', day: normDay };
+  if (normDay <= Math.round(13 * scale)) return { phase: 'Follicular Phase', icon: '🌱', color: 'var(--green)',  desc: 'Energy is building. Good time for new projects and social plans.', day: normDay };
+  if (normDay <= Math.round(16 * scale)) return { phase: 'Ovulation Phase',  icon: '🌕', color: 'var(--gold)',   desc: 'Peak energy and confidence. You may feel your most social and magnetic.', day: normDay };
+  return { phase: 'Luteal Phase', icon: '🌘', color: 'var(--accent)', desc: 'Energy begins to wind down. Cravings and mood shifts are common — be patient with yourself.', day: normDay };
+}
+
+// ── RENDER APP ──
+function renderApp() {
+  const avg = avgCycle(userEntries);
+  const next = nextPredicted(userEntries);
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  document.getElementById('avg-cycle').textContent = avg + 'd';
+  if (next) {
+    document.getElementById('next-date').textContent = MONTHS[next.getMonth()] + ' ' + next.getDate();
+    const d = Math.round((next - today) / 864e5);
+    document.getElementById('days-away').textContent = d === 0 ? 'Today' : d > 0 ? d + 'd' : Math.abs(d) + 'd ago';
+  }
+
+  const phase = getPhase(userEntries);
+  if (phase) {
+    document.getElementById('phase-icon').textContent = phase.icon;
+    document.getElementById('phase-name').textContent = phase.phase;
+    document.getElementById('phase-name').style.color = phase.color;
+    document.getElementById('phase-desc').textContent = phase.desc;
+    document.getElementById('phase-cycle-day').textContent = phase.day;
+    document.getElementById('phase-banner').style.borderColor = phase.color.replace('var(', '').replace(')', '') + '44';
+    document.getElementById('phase-banner').style.background = phase.color.replace('var(', '').replace(')', '') + '12';
+  }
+
+  const allEntries = [...userEntries];
+  if (next) {
+    const a2 = avg;
+    for (let i = 0; i < 2; i++) {
+      const pred = new Date(next.getTime() + i * a2 * 864e5);
+      allEntries.push({ year: pred.getFullYear(), month: pred.getMonth() + 1, day: pred.getDate(), type: 'predicted', notes: 'Estimated · ' + a2 + '-day avg' });
+    }
+  }
+
+  allEntries.sort((a, b) => new Date(a.year, (a.month||1)-1, a.day||1) - new Date(b.year, (b.month||1)-1, b.day||1));
+
+  const container = document.getElementById('timeline');
+  container.innerHTML = '';
+
+  allEntries.forEach((entry, idx) => {
+    const el = document.createElement('div');
+    el.className = 'entry';
+    const dotClass = entry.type === 'missed' ? 'missed' : entry.type === 'predicted' ? 'predicted' : 'logged';
+    const badge = entry.type === 'logged'
+      ? `<span class="badge on-time">Logged</span>`
+      : entry.type === 'missed'
+      ? `<span class="badge missed">Missed</span>`
+      : `<span class="badge predicted-badge">Predicted</span>`;
+    const dateStr = entry.day
+      ? `${MONTH_NAMES[entry.month-1]} ${entry.day}, ${entry.year}`
+      : `${MONTH_NAMES[entry.month-1]} ${entry.year} — no period`;
+    let gapStr = '';
+    if (entry.type === 'logged' && idx > 0) {
+      const prev = allEntries.slice(0, idx).reverse().find(e => e.type === 'logged' && e.day);
+      if (prev) {
+        const gap = Math.round((new Date(entry.year, entry.month-1, entry.day) - new Date(prev.year, prev.month-1, prev.day)) / 864e5);
+        if (gap < 60) gapStr = gap + ' days since last';
+      }
+    }
+    const hasDetail = gapStr || entry.notes || entry.type === 'predicted';
+    el.innerHTML = `
+      <div class="dot ${dotClass}"><div class="dot-inner"></div></div>
+      <div class="card${entry.type==='predicted'?' predicted':''}">
+        <div class="card-top"><span class="month-label">${MONTH_NAMES[entry.month-1]} ${entry.year}</span>${badge}</div>
+        <div class="card-date">${dateStr}</div>
+        ${hasDetail ? `<div class="card-detail">
+          ${gapStr ? `<div class="detail-row"><span>Cycle length</span><span>${gapStr}</span></div>` : ''}
+          ${entry.notes ? `<div class="detail-row"><span>Note</span><span>${entry.notes}</span></div>` : ''}
+          ${entry.type==='predicted' ? `<div class="detail-row"><span>Status</span><span>Estimate only</span></div>` : ''}
+        </div>` : ''}
+      </div>`;
+    if (hasDetail) el.querySelector('.card').addEventListener('click', () => el.querySelector('.card-detail').classList.toggle('open'));
+    container.appendChild(el);
+  });
+}
+
+// ── ADD ENTRY ──
+document.getElementById('toggle-add').addEventListener('click', () => document.getElementById('add-form').classList.toggle('open'));
+document.getElementById('cancel-entry-btn').addEventListener('click', () => document.getElementById('add-form').classList.remove('open'));
+document.getElementById('save-entry-btn').addEventListener('click', async () => {
+  const sel = document.getElementById('new-month');
+  const opt = sel.options[sel.selectedIndex];
+  const month = parseInt(opt.value);
+  const year = parseInt(opt.dataset.year);
+  const day = parseInt(document.getElementById('new-day').value);
+  const notes = document.getElementById('new-notes').value.trim();
+  if (!day || day < 1 || day > 31) { alert('Enter a valid day.'); return; }
+  const sortKey = year * 10000 + month * 100 + day;
+  try {
+    await addDoc(collection(db, 'users', currentUser.username, 'entries'), { year, month, day, notes, type: 'logged', sortKey });
+    document.getElementById('new-day').value = '';
+    document.getElementById('new-notes').value = '';
+    document.getElementById('add-form').classList.remove('open');
+    await loadEntries();
+  } catch(e) { alert('Failed to save. Check your connection.'); }
+});
+
+// ── ADMIN: users ──
+async function loadUserList() {
+  const container = document.getElementById('user-list');
+  container.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    if (snap.empty) { container.innerHTML = '<div class="loading">No users yet.</div>'; return; }
+    container.innerHTML = '';
+    snap.forEach(d => {
+      const u = d.data();
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.innerHTML = `<div><div class="user-name">${u.displayName}</div><div class="user-meta">@${d.id}</div></div><button class="delete-user-btn" data-uid="${d.id}">Remove</button>`;
+      card.querySelector('.delete-user-btn').addEventListener('click', () => deleteUser(d.id, u.displayName));
+      container.appendChild(card);
+    });
+  } catch(e) { container.innerHTML = '<div class="loading">Failed to load users.</div>'; }
+}
+
+document.getElementById('add-user-btn').addEventListener('click', async () => {
+  const displayName = document.getElementById('new-user-name').value.trim();
+  const username = document.getElementById('new-user-username').value.trim().toLowerCase();
+  const pin = document.getElementById('new-user-pin').value.trim();
+  const statusEl = document.getElementById('admin-status');
+  statusEl.className = 'status-msg'; statusEl.textContent = '';
+  if (!displayName || !username || pin.length !== 4) {
+    statusEl.className = 'status-msg error'; statusEl.textContent = 'Fill in all fields. PIN must be exactly 4 digits.'; return;
+  }
+  if (username === 'abhi') {
+    statusEl.className = 'status-msg error'; statusEl.textContent = 'That username is reserved.'; return;
+  }
+  try {
+    const existing = await getDoc(doc(db, 'users', username));
+    if (existing.exists()) { statusEl.className = 'status-msg error'; statusEl.textContent = 'Username already exists.'; return; }
+    await setDoc(doc(db, 'users', username), { displayName, pin });
+    document.getElementById('new-user-name').value = '';
+    document.getElementById('new-user-username').value = '';
+    document.getElementById('new-user-pin').value = '';
+    statusEl.textContent = `✓ ${displayName} added successfully.`;
+    await loadUserList();
+  } catch(e) { statusEl.className = 'status-msg error'; statusEl.textContent = 'Error saving user. Try again.'; }
+});
+
+async function deleteUser(username, displayName) {
+  if (!confirm(`Remove "${displayName}"? All their data will be deleted.`)) return;
+  try {
+    const entriesSnap = await getDocs(collection(db, 'users', username, 'entries'));
+    for (const d of entriesSnap.docs) await deleteDoc(d.ref);
+    await deleteDoc(doc(db, 'users', username));
+    await loadUserList();
+  } catch(e) { alert('Failed to delete user.'); }
+}
+
+// ── SEED NITISHA ──
+async function seedNitisha() {
+  const snap = await getDoc(doc(db, 'users', 'nitisha'));
+  if (snap.exists()) return;
+  await setDoc(doc(db, 'users', 'nitisha'), { displayName: 'Nitisha', pin: '0000' });
+  const seedData = [
+    { year: 2026, month: 1, day: 22, notes: '', type: 'logged', sortKey: 20260122 },
+    { year: 2026, month: 2, day: 25, notes: 'approx.', type: 'logged', sortKey: 20260225 },
+    { year: 2026, month: 3, day: 27, notes: '', type: 'logged', sortKey: 20260327 },
+    { year: 2026, month: 4, day: null, notes: 'No period this month', type: 'missed', sortKey: 20260401 },
+    { year: 2026, month: 5, day: 26, notes: '', type: 'logged', sortKey: 20260526 },
+  ];
+  for (const e of seedData) await addDoc(collection(db, 'users', 'nitisha', 'entries'), e);
+}
+
+seedNitisha();
+</script>
+</body>
+</html>
