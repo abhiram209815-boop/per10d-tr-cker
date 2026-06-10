@@ -202,6 +202,14 @@
     </div>
     <div class="phase-day"><strong id="phase-cycle-day">—</strong>cycle day</div>
   </div>
+  <div class="phase-banner phase-next" id="next-phase-banner" style="opacity:0.6; margin-top:-10px;">
+    <span class="phase-icon" id="next-phase-icon">🌑</span>
+    <div>
+      <div class="phase-name" id="next-phase-name" style="font-size:0.88rem;">—</div>
+      <div class="phase-desc" id="next-phase-desc">—</div>
+    </div>
+    <div class="phase-day"><strong id="next-phase-days">—</strong>days away</div>
+  </div>
   <div class="summary">
     <div class="stat"><span class="stat-value" id="avg-cycle">—</span><span class="stat-label">Avg Cycle</span></div>
     <div class="stat"><span class="stat-value" id="next-date">—</span><span class="stat-label">Next Period</span></div>
@@ -310,7 +318,6 @@ document.getElementById('pin-pad').addEventListener('click', e => {
   if (pinBuffer.length >= 4) return;
   pinBuffer += btn.dataset.pin;
   updatePinDots();
-  if (pinBuffer.length === 4) setTimeout(doLogin, 150);
 });
 
 document.getElementById('pin-del').addEventListener('click', () => {
@@ -361,7 +368,7 @@ async function doLogin() {
 
 // ── LOGOUT ──
 function doLogout() {
-  currentUser = null; pinBuffer = ''; updatePinDots();
+  currentUser = null; pinBuffer = ''; userEntries = []; updatePinDots();
   document.getElementById('login-username').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-screen').style.display = 'flex';
@@ -373,10 +380,24 @@ document.getElementById('admin-logout-btn').addEventListener('click', doLogout);
 
 // ── SHOW APP ──
 async function showApp() {
+  userEntries = [];
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
   document.getElementById('admin-screen').style.display = 'none';
   document.getElementById('user-name-title').textContent = currentUser.displayName;
+  // Reset all display fields before loading
+  document.getElementById('avg-cycle').textContent = '—';
+  document.getElementById('next-date').textContent = '—';
+  document.getElementById('days-away').textContent = '—';
+  document.getElementById('phase-icon').textContent = '🌑';
+  document.getElementById('phase-name').textContent = '—';
+  document.getElementById('phase-name').style.color = '';
+  document.getElementById('phase-desc').textContent = 'Log your first period to see your cycle phase.';
+  document.getElementById('phase-cycle-day').textContent = '—';
+  document.getElementById('phase-banner').style.borderColor = '';
+  document.getElementById('phase-banner').style.background = '';
+  document.getElementById('next-phase-banner').style.display = 'none';
+  document.getElementById('timeline').innerHTML = '<div class="loading">Loading…</div>';
   populateMonthDropdown();
   await loadEntries();
 }
@@ -394,12 +415,14 @@ function populateMonthDropdown() {
   const sel = document.getElementById('new-month');
   sel.innerHTML = '';
   const today = new Date();
-  for (let i = 0; i < 12; i++) {
+  // Show past 24 months + future 6 months
+  for (let i = -24; i <= 6; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
     const opt = document.createElement('option');
     opt.value = d.getMonth() + 1;
     opt.dataset.year = d.getFullYear();
     opt.textContent = MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    if (i === 0) opt.selected = true;
     sel.appendChild(opt);
   }
 }
@@ -476,14 +499,42 @@ function renderApp() {
   }
 
   const phase = getPhase(userEntries);
+  const PHASE_ORDER = [
+    { phase: 'Menstrual Phase',  icon: '🩸', color: '#e08899', desc: 'Rest and be gentle with yourself. Energy is lower and inward focus is natural.' },
+    { phase: 'Follicular Phase', icon: '🌱', color: '#7ac4a8', desc: 'Energy is building. Good time for new projects and social plans.' },
+    { phase: 'Ovulation Phase',  icon: '🌕', color: '#d4a96a', desc: 'Peak energy and confidence. You may feel your most social and magnetic.' },
+    { phase: 'Luteal Phase',     icon: '🌘', color: '#b87bc8', desc: 'Energy begins to wind down. Cravings and mood shifts are common — be patient with yourself.' },
+  ];
+  document.getElementById('next-phase-banner').style.display = phase ? '' : 'none';
   if (phase) {
+    const colorMap = { 'Menstrual Phase': '#e08899', 'Follicular Phase': '#7ac4a8', 'Ovulation Phase': '#d4a96a', 'Luteal Phase': '#b87bc8' };
+    const color = colorMap[phase.phase] || '#b87bc8';
     document.getElementById('phase-icon').textContent = phase.icon;
     document.getElementById('phase-name').textContent = phase.phase;
-    document.getElementById('phase-name').style.color = phase.color;
+    document.getElementById('phase-name').style.color = color;
     document.getElementById('phase-desc').textContent = phase.desc;
     document.getElementById('phase-cycle-day').textContent = phase.day;
-    document.getElementById('phase-banner').style.borderColor = phase.color.replace('var(', '').replace(')', '') + '44';
-    document.getElementById('phase-banner').style.background = phase.color.replace('var(', '').replace(')', '') + '12';
+    document.getElementById('phase-banner').style.borderColor = color + '55';
+    document.getElementById('phase-banner').style.background = color + '18';
+
+    // Next phase
+    const phaseNames = PHASE_ORDER.map(p => p.phase);
+    const curIdx = phaseNames.indexOf(phase.phase);
+    const nextPhaseData = PHASE_ORDER[(curIdx + 1) % 4];
+    const nextColor = nextPhaseData.color;
+    // Calculate days until next phase transition
+    const avgC = avgCycle(userEntries);
+    const scale = avgC / 28;
+    const phaseLengths = [Math.round(5*scale), Math.round(8*scale), Math.round(3*scale), avgC - Math.round(5*scale) - Math.round(8*scale) - Math.round(3*scale)];
+    const phaseEnds = phaseLengths.reduce((acc, l, i) => { acc.push((acc[i-1]||0) + l); return acc; }, []);
+    const daysUntilNext = (phaseEnds[curIdx] || avgC) - phase.day + 1;
+    document.getElementById('next-phase-icon').textContent = nextPhaseData.icon;
+    document.getElementById('next-phase-name').textContent = 'Next: ' + nextPhaseData.phase;
+    document.getElementById('next-phase-name').style.color = nextColor;
+    document.getElementById('next-phase-desc').textContent = nextPhaseData.desc;
+    document.getElementById('next-phase-days').textContent = daysUntilNext > 0 ? daysUntilNext : 1;
+    document.getElementById('next-phase-banner').style.borderColor = nextColor + '44';
+    document.getElementById('next-phase-banner').style.background = nextColor + '0d';
   }
 
   const allEntries = [...userEntries];
